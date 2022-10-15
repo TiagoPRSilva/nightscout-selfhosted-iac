@@ -60,7 +60,7 @@ For password variables, it is a good practise to use a password manager to gener
 
 After all the configuration:
 
-```console
+```bash
 # change to the directory where the docker-compose.yml is.
 cd to/cloned/repository/folder
 
@@ -73,7 +73,7 @@ After this you can see that everything is up and running by accessing portainer 
 
 Now in order to make your nightscout instance available via https a last step is required. Stop your services by executing the commands bellow
 
-```console
+```bash
 # change to the directory where the docker-compose.yml is.
 cd to/cloned/repository/folder
 
@@ -87,7 +87,7 @@ The final step is to configure your reverse proxy (nginx inside swag container) 
 
 Navigate to this folder in your system 'BASE_CONFIG_PATH/swag/config/nginx/proxy-confs/', then create a file with the following content and add it to that folder.
 
-```console
+```nginx
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
@@ -111,7 +111,7 @@ Then navigate to this folder in your system 'BASE_CONFIG_PATH/swag/config/nginx/
 
 On this file ensure the follow content is not commented:
 
-```console
+```nginx
 server {
     listen 80;
     listen [::]:80;
@@ -122,7 +122,7 @@ server {
 
 After this start the services again:
 
-```console
+```bash
 # change to the directory where the docker-compose.yml is.
 cd to/cloned/repository/folder
 
