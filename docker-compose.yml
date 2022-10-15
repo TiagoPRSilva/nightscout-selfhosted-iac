@@ -1,0 +1,130 @@
+version: '3.7'
+services:
+
+  portainer:
+    container_name: portainer
+    restart: ${RESTART_MODE}
+    image: portainer/portainer-ce:latest
+    command: -H unix:///var/run/docker.sock
+    ports:
+      - 9000:9000
+      - 8000:8000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      - TZ=${TZ}
+
+  duckdns:
+    container_name: duckdns
+    restart: ${RESTART_MODE}
+    image: ghcr.io/linuxserver/duckdns:latest
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SUBDOMAINS=${DUCKDNS_SUBDOMAINS}
+      - TOKEN=${DUCKDNS_TOKEN}
+      - LOG_FILE=false
+
+  swag:
+    container_name: swag
+    restart: ${RESTART_MODE}
+    image: ghcr.io/linuxserver/swag:latest
+    cap_add:
+    - NET_ADMIN
+    volumes:
+    - ${BASE_CONFIG_PATH}/swag/config:/config
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - EMAIL=${EMAIL}
+      - URL=${DUCKDNS_FQDN}
+      - SUBDOMAINS=wildcard
+      - VALIDATION=duckdns
+      - DUCKDNSTOKEN=${DUCKDNS_TOKEN}
+    ports:
+      - "180:80"
+      - "1443:443"
+
+  # https://github.com/bitnami/containers/tree/main/bitnami/mongodb#how-to-use-this-image
+  mongo: 
+    container_name: mongo
+    restart: ${RESTART_MODE}
+    image: bitnami/mongodb:latest
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - MONGODB_PORT_NUMBER=${PGID}
+      - MONGODB_ROOT_USER=${MONGODB_PORT}
+      - MONGODB_ROOT_PASSWORD=${MONGODB_ROOT_PASSWORD}
+      - MONGODB_USERNAME=${MONGODB_USER}
+      - MONGODB_PASSWORD=${MONGODB_PASSWORD}
+      - MONGODB_DATABASE=${NS_DB_NAME}
+      - MONGODB_EXTRA_FLAGS=--wiredTigerCacheSizeGB=2
+    volumes:
+      - ${BASE_DATA_PATH}/mongodb/data:/bitnami/mongodb:cached
+    ports:
+      - ${MONGODB_PORT}:${MONGODB_PORT}
+
+  nightscout:
+    container_name: nightscout
+    restart: ${RESTART_MODE}
+    image: nightscout/cgm-remote-monitor:latest # latest_dev for those who use dev branch
+    depends_on:
+      - mongo
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - PORT=${NS_PORT}
+      - INSECURE_USE_HTTP=true
+      - SECURE_HSTS_HEADER=true
+      - SECURE_HSTS_HEADER_INCLUDESUBDOMAINS=true
+      - SECURE_HSTS_HEADER_PRELOAD=true
+      - NODE_ENV=production
+      - MONGO_COLLECTION=entries
+      - MONGODB_URI=mongodb://${NS_DB_USER}:${NS_DB_PASSWORD}@mongo:27017/${NS_DB_NAME}
+      - CUSTOM_TITLE=${NS_TITLE}
+      - API_SECRET=${NS_API_SECRET}
+      - AUTH_DEFAULT_ROLES=${NS_AUTH_DEFAULT_ROLES}
+      - ALARM_HIGH=${NS_ALARM_HIGH}
+      - ALARM_LOW=${NS_ALARM_LOW}
+      - ALARM_TIMEAGO_URGENT=${NS_ALARM_TIMEAGO_URGENT}
+      - ALARM_TIMEAGO_URGENT_MINS=${NS_ALARM_TIMEAGO_URGENT_MINS}
+      - ALARM_TIMEAGO_WARN=${NS_ALARM_TIMEAGO_WARN}
+      - ALARM_TIMEAGO_WARN_MINS=${NS_ALARM_TIMEAGO_WARN_MINS}
+      - ALARM_TYPES=${NS_ALARM_TYPES}
+      - ALARM_URGENT_HIGH=${NS_ALARM_URGENT_HIGH}
+      - ALARM_URGENT_LOW=${NS_ALARM_URGENT_LOW}
+      - BASAL_RENDER=${NS_BASAL_RENDER}
+      - BG_HIGH=${NS_BG_HIGH}
+      - BG_LOW=${NS_BG_LOW}
+      - BG_TARGET_BOTTOM=${NS_BG_TARGET_BOTTOM}
+      - BG_TARGET_TOP=${NS_BG_TARGET_TOP}
+      - DISPLAY_UNITS=${NS_DISPLAY_UNITS}
+      - CAGE_ENABLE_ALERTS=${NS_CAGE_ENABLE_ALERTS}
+      - ENABLE=${NS_ENABLE}
+      - NIGHT_MODE=${NS_NIGHT_MODE}
+      - PUMP_FIELDS=${NS_PUMP_FIELDS}
+      - PUMP_URGENT_BATT_P=${NS_PUMP_URGENT_BATT_P}
+      - PUMP_WARN_BATT_P=${NS_PUMP_WARN_BATT_P}
+      - SHOW_FORECAST=${NS_SHOW_FORECAST}
+      - SHOW_PLUGINS=${NS_SHOW_PLUGINS}
+      - SHOW_RAWBG=${NS_SHOW_RAWBG}
+      - THEME=${NS_THEME}
+      - TIME_FORMAT=${NS_TIME_FORMAT}
+    ports:
+      - ${NS_PORT}:${NS_PORT}
+
+volumes:
+  portainer_data:
+
+networks:
+ default:
+   driver: bridge
+   ipam:
+     config:
+       - subnet: 172.25.0.0/24
